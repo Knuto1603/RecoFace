@@ -1,38 +1,33 @@
 package com.example.recoface.data.ml
 
+import android.util.Log
 import javax.inject.Inject
-import kotlin.math.max
-import kotlin.math.min
 import kotlin.math.sqrt
 
 class FaceComparator @Inject constructor() {
 
     companion object {
-        // Threshold típico para FaceNet:
-        // < 1.0 = match muy confiable
-        // 1.0 - 1.2 = match probable
-        // 1.2 - 1.4 = match dudoso
-        // > 1.4 = no match
-        private const val MATCH_THRESHOLD = 1.0f
+        // Threshold para distancia coseno (rango: 0 a 2)
+        // 0.0 = idénticos, 1.0 = ortogonales, 2.0 = opuestos
+        private const val MATCH_THRESHOLD = 0.6f // Usa 0.4 - 0.7 para distancia coseno
     }
 
     fun getThreshold(): Float = MATCH_THRESHOLD
 
-    /**
-     * Compara dos embeddings y determina si pertenecen a la misma persona.
-     * @return true si la distancia es menor al threshold (son similares)
-     */
     fun areSimilar(embedding1: FloatArray, embedding2: FloatArray): Boolean {
-        return calculateDistance(embedding1, embedding2) < MATCH_THRESHOLD
+        val distance = calculateCosineDistance(embedding1, embedding2)
+
+        Log.d("FaceComparator", "Distancia coseno: $distance | Threshold: $MATCH_THRESHOLD | Match: ${distance < MATCH_THRESHOLD}")
+
+        return distance < MATCH_THRESHOLD
     }
 
     /**
-     * Calcula la distancia Euclidiana L2 entre dos vectores.
-     * Distancias más pequeñas = caras más similares.
+     * Distancia Euclidiana L2 (método original)
      */
     fun calculateDistance(emb1: FloatArray, emb2: FloatArray): Float {
         if (emb1.size != emb2.size) {
-            //Log.w("FaceComparator", "Embeddings de tamaño diferente: ${emb1.size} vs ${emb2.size}")
+            Log.w("FaceComparator", "Embeddings de tamaño diferente: ${emb1.size} vs ${emb2.size}")
             return Float.MAX_VALUE
         }
 
@@ -45,13 +40,50 @@ class FaceComparator @Inject constructor() {
     }
 
     /**
-     * Calcula la similitud como porcentaje (0-100%).
-     * Útil para mostrar en la UI.
+     * Distancia Coseno: 1 - similitud_coseno
+     * Rango: 0 (idénticos) a 2 (opuestos)
+     * Más robusto para embeddings normalizados
      */
+    fun calculateCosineDistance(emb1: FloatArray, emb2: FloatArray): Float {
+        if (emb1.size != emb2.size) {
+            Log.w("FaceComparator", "Embeddings de tamaño diferente: ${emb1.size} vs ${emb2.size}")
+            return Float.MAX_VALUE
+        }
+
+        // Calcular producto punto
+        var dotProduct = 0f
+        var magnitude1 = 0f
+        var magnitude2 = 0f
+
+        for (i in emb1.indices) {
+            dotProduct += emb1[i] * emb2[i]
+            magnitude1 += emb1[i] * emb1[i]
+            magnitude2 += emb2[i] * emb2[i]
+        }
+
+        magnitude1 = sqrt(magnitude1)
+        magnitude2 = sqrt(magnitude2)
+
+        if (magnitude1 == 0f || magnitude2 == 0f) {
+            Log.w("FaceComparator", "Embedding con magnitud 0")
+            return Float.MAX_VALUE
+        }
+
+        // Similitud coseno: dot / (mag1 * mag2)
+        val cosineSimilarity = dotProduct / (magnitude1 * magnitude2)
+
+        // Convertir a distancia: 1 - similitud (rango 0 a 2)
+        val cosineDistance = 1f - cosineSimilarity
+
+        Log.d("FaceComparator", "Similitud coseno: $cosineSimilarity | Distancia: $cosineDistance")
+
+        return cosineDistance.coerceIn(0f, 2f)
+    }
+
     fun calculateSimilarityPercentage(emb1: FloatArray, emb2: FloatArray): Float {
-        val distance = calculateDistance(emb1, emb2)
-        // Convertir distancia a porcentaje (0 = 100%, threshold = 0%)
-        val similarity = max(0f, (1f - (distance / MATCH_THRESHOLD)) * 100f)
-        return min(100f, similarity)
+        val distance = calculateCosineDistance(emb1, emb2)
+        // Para distancia coseno: 0 = 100%, 0.6 (threshold) = 0%
+        val similarity = kotlin.math.max(0f, (1f - (distance / MATCH_THRESHOLD)) * 100f)
+        return kotlin.math.min(100f, similarity)
     }
 }

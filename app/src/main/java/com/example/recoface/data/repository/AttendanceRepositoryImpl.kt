@@ -39,7 +39,7 @@ class AttendanceRepositoryImpl @Inject constructor(
             val person = personDao.getPersonById(entity.personId)
             entity.toDomainModel().copy(
                 personDni = person?.dni,
-                personName = if(person != null) "${person.firstName} ${person.lastName}" else "Desconocido"
+                personName = if(person != null) "${person.firstName} ${person.lastName}" else "Desconocido",
             )
         }
     }

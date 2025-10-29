@@ -16,7 +16,7 @@ fun PersonEntity.toDomainModel(): Person {
         firstName = this.firstName,
         lastName = this.lastName,
         embedding = FaceEmbedding(byteArrayToFloatArray(this.embedding)),
-        facePhotoPath = this.facePhotoPath // <-- AÑADIDO
+        facePhotoPath = this.facePhotoPath
     )
 }
 
@@ -27,17 +27,20 @@ fun Person.toEntity(): PersonEntity {
         firstName = this.firstName,
         lastName = this.lastName,
         embedding = floatArrayToByteArray(this.embedding.value),
-        facePhotoPath = this.facePhotoPath // <-- AÑADIDO
+        facePhotoPath = this.facePhotoPath
     )
 }
 
-// --- Mappers de Asistencia --- (Estos no cambian)
+// --- Mappers de Asistencia ---
 
 fun AttendanceEntity.toDomainModel(): AttendanceRecord {
     return AttendanceRecord(
         id = this.id,
         personId = this.personId,
-        timestamp = this.timestamp
+        personDni = "", // Se llena después si es necesario
+        personName = "", // Se llena después si es necesario
+        timestamp = this.timestamp,
+        confidence = 0f // ✅ Valor por defecto - no se guarda en BD
     )
 }
 
@@ -46,7 +49,6 @@ fun AttendanceRecord.toEntity(): AttendanceEntity {
         id = this.id,
         personId = this.personId,
         timestamp = this.timestamp
+        // ✅ No incluimos confidence - es un dato temporal
     )
 }
-
-

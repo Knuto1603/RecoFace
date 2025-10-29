@@ -6,5 +6,6 @@ data class AttendanceRecord(
     val timestamp: Long,
 
     val personDni: String? = null,
-    val personName: String? = null
+    val personName: String? = null,
+    val confidence: Float
 )

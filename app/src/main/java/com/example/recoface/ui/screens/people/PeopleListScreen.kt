@@ -18,44 +18,73 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.example.recoface.ui.components.MainScaffold
 import com.example.recoface.ui.components.PersonListItem
-import androidx.compose.runtime.LaunchedEffect
-
+// import androidx.compose.runtime.LaunchedEffect // No longer needed here
 import com.example.recoface.ui.navigation.AppScreen
 
 @Composable
 fun PeopleListScreen(
-    navController: NavController, // <-- Ya lo recibe
+    navController: NavController,
     viewModel: PeopleListViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState
     val context = LocalContext.current
 
-    LaunchedEffect(Unit) {
-        viewModel.loadPeople()
-    }
+    // 🛑 REMOVED: Redundant LaunchedEffect - ViewModel loads data in init
+    // LaunchedEffect(Unit) {
+    //     viewModel.loadPeople()
+    // }
 
     MainScaffold(titulo = "Personas Registradas") { paddingValues ->
         Box(
-            // ... (modificador de Box)
+            // ✅ ADDED: Modifiers for Box
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .padding(16.dp),
+            contentAlignment = Alignment.Center // Center content like loading/error messages
         ) {
             when {
-                // ... (when isLoading, error, empty)
+                // ✅ ADDED: Content for isLoading state
+                uiState.isLoading -> {
+                    CircularProgressIndicator()
+                }
 
+                // ✅ ADDED: Content for error state
+                uiState.error != null -> {
+                    Text(
+                        text = uiState.error!!,
+                        color = MaterialTheme.colorScheme.error,
+                        textAlign = TextAlign.Center
+                    )
+                }
+
+                // ✅ ADDED: Content for empty list state
+                uiState.people.isEmpty() -> {
+                    Text(
+                        text = "No hay personas registradas.",
+                        textAlign = TextAlign.Center
+                    )
+                }
+
+                // Content for success state
                 else -> {
                     LazyColumn(
-                        // ... (modificador de LazyColumn)
+                        // ✅ ADDED: Modifiers for LazyColumn
+                        modifier = Modifier.fillMaxSize(),
+                        verticalArrangement = Arrangement.spacedBy(8.dp) // Add spacing between items
                     ) {
-                        items(uiState.people) { person ->
+                        items(uiState.people, key = { it.id }) { person -> // Added key for better performance
                             PersonListItem(
                                 person = person,
                                 onEditClick = {
-                                    // 2. CONECTA LA NAVEGACIÓN
                                     navController.navigate(
                                         AppScreen.EditPerson.createRoute(it.id)
                                     )
                                 },
                                 onDeleteClick = {
                                     viewModel.deletePerson(it)
+                                    // Optional: Show a confirmation Toast
+                                    Toast.makeText(context, "${it.firstName} eliminado", Toast.LENGTH_SHORT).show()
                                 }
                             )
                         }
